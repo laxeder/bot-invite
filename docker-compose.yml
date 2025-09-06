@@ -1,0 +1,69 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:17
+    container_name: botinvite_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - botinvite_postgres_data:/var/lib/postgresql/data
+    networks:
+      - default
+
+  redis:
+    image: redis:7
+    container_name: botinvite_redis
+    restart: always
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - botinvite_redis_data:/data
+    networks:
+      - default
+
+  dev:
+    build:
+      context: ./
+      dockerfile: dockerfiles/Dockerfile.dev
+    container_name: botinvite_dev
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    networks:
+      - default
+
+  prod:
+    build:
+      context: ./
+      dockerfile: dockerfiles/Dockerfile.prod
+    container_name: botinvite_prod
+    restart: always
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - db
+      - redis
+    networks:
+      - default
+
+volumes:
+  botinvite_postgres_data:
+  botinvite_redis_data:
+
+networks:
+  default:
+    driver: bridge

@@ -1,19 +1,12 @@
-import sequelize from "./database/sequelize";
-import Redis from "ioredis";
+import { connectRedis } from "./database/redis";
+import { connectSequelize } from "./database/sequelize";
 
-const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+import { createBotInstance } from "./bot/botInstance";
 
 async function main() {
-  try {
-    await sequelize.authenticate();
-    await sequelize.sync({ alter: true });
-    console.info("✅ Banco conectado e sincronizado!");
-
-    await redis.set("ping", "pong");
-    console.info("Redis respondeu:", await redis.get("ping"));
-  } catch (error) {
-    console.error("❌ Erro:", error);
-  }
+  await connectSequelize();
+  await connectRedis();
+  await createBotInstance();
 }
 
 main();

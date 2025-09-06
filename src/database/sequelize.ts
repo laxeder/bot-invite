@@ -12,4 +12,10 @@ const sequelize = new Sequelize({
   logging: false,
 });
 
+export async function connectSequelize() {
+  await sequelize.authenticate();
+  await sequelize.sync({ alter: true });
+  console.info("✅ Banco conectado e sincronizado!");
+}
+
 export default sequelize;

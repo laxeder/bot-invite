@@ -3,10 +3,16 @@ import type { WAMessageKey, WASocket } from "baileys";
 
 import pino from "pino";
 import QR from "qrcode-terminal";
-import makeWASocket, { Browsers, isJidUser, isLidUser } from "baileys";
+import makeWASocket, {
+  Browsers,
+  getContentType,
+  isJidUser,
+  isLidUser,
+} from "baileys";
 
 import redis from "../database/redis";
 import { useRedisAuthState } from "../utils/botAuth";
+import { sendInviteToAlls } from "../commands/sendInvite";
 
 export default class BotController {
   protected sock!: WASocket;
@@ -67,6 +73,34 @@ export default class BotController {
 
   private configEvents() {
     this.sock.ev.on("creds.update", this.auth.saveCreds);
+
+    this.sock.ev.on("messages.upsert", ({ messages }) => {
+      for (const message of messages) {
+        console.info(JSON.stringify(message));
+        if (!message.message) return;
+
+        const contentType = getContentType(message.message);
+        if (!contentType) return;
+
+        const messageContent = message.message[contentType];
+        console.log(contentType, messageContent);
+
+        const msgText =
+          contentType === "conversation"
+            ? messageContent[contentType]
+            : contentType === "extendedTextMessage"
+            ? messageContent["text"]
+            : null;
+
+        if (!msgText) return;
+
+        if (msgText.toLowerCase() === "enviar convites") {
+          sendInviteToAlls(this);
+        }
+
+        console.log(msgText);
+      }
+    });
   }
 
   public ignoreJid(jid: string) {
@@ -77,5 +111,32 @@ export default class BotController {
     // TODO: implementar store para obter mensagem
     //? Adicione isso acaso as mensagens fique aparacendo "Aguardando"
     return null;
+  }
+
+  public getJidFromNumber(number: string) {
+    const parsed = `${number}`.replace(/\D+/g, "");
+    return `${parsed}@s.whatsapp.net`;
+  }
+
+  public async sendText(number: string, message: string) {
+    const jid = this.getJidFromNumber(number);
+    await this.sock.sendMessage(jid, { text: message });
+  }
+
+  public async sendPoll(
+    number: string,
+    message: string,
+    options: string[],
+    selectCount: number = 1
+  ) {
+    const jid = this.getJidFromNumber(number);
+    await this.sock.sendMessage(jid, {
+      poll: {
+        name: message,
+        values: options,
+        selectableCount: selectCount,
+        toAnnouncementGroup: false,
+      },
+    });
   }
 }

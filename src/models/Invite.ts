@@ -13,6 +13,7 @@ export enum InviteStatus {
   PENDING = "pending",
   ACCEPTED = "accepted",
   REJECTED = "rejected",
+  NOT_RESPONDED = "not_responded",
 }
 
 @Table({

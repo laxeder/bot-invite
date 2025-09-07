@@ -23,6 +23,9 @@ export default class UserInvite extends Model {
   @Column(DataType.INTEGER)
   enviteId!: number;
 
+  @Column(DataType.STRING)
+  pollId!: string;
+
   @BelongsTo(() => User)
   user!: User;
 

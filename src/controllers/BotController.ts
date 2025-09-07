@@ -261,6 +261,11 @@ export default class BotController {
     return await this.sock.sendMessage(jid, { image, caption });
   }
 
+  public async sendImageFromUrl(number: string, url: string, caption?: string) {
+    const jid = this.getJidFromNumber(number);
+    return await this.sock.sendMessage(jid, { image: { url }, caption });
+  }
+
   public async sendImageFromPath(
     number: string,
     path: string,

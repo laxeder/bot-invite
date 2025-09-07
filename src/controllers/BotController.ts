@@ -120,7 +120,7 @@ export default class BotController {
 
   public async sendText(number: string, message: string) {
     const jid = this.getJidFromNumber(number);
-    await this.sock.sendMessage(jid, { text: message });
+    return await this.sock.sendMessage(jid, { text: message });
   }
 
   public async sendPoll(
@@ -130,7 +130,7 @@ export default class BotController {
     selectCount: number = 1
   ) {
     const jid = this.getJidFromNumber(number);
-    await this.sock.sendMessage(jid, {
+    return await this.sock.sendMessage(jid, {
       poll: {
         name: message,
         values: options,

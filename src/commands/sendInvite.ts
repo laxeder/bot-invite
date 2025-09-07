@@ -73,12 +73,20 @@ export async function sendInvite(
       status: InviteStatus.PENDING,
     });
 
-    await UserInvite.create({
+    const pollInvite = await UserInvite.create({
       userId: user.id,
       inviteId: invite.id,
     });
 
-    await bot.sendPoll(user.number, "Convite para casamento", options);
+    const pollMsg = await bot.sendPoll(
+      user.number,
+      "Convite para casamento",
+      options
+    );
+
+    const pollId = pollMsg.key.id;
+
+    await pollInvite.update({ pollId, poll: pollMsg });
   } catch (error) {
     console.error(
       `Erro ao enviar convite para "${user.name}": ${error.message}\n${error.stack}`

@@ -1,3 +1,5 @@
+import type { WAMessage } from "baileys";
+
 import {
   Table,
   Column,
@@ -25,6 +27,9 @@ export default class UserInvite extends Model {
 
   @Column(DataType.STRING)
   pollId!: string;
+
+  @Column(DataType.JSONB)
+  poll!: WAMessage;
 
   @BelongsTo(() => User)
   user!: User;

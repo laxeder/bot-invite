@@ -1,6 +1,7 @@
 import type { BotAuth } from "../utils/botAuth";
 import type { WAMessageKey, WASocket } from "baileys";
 
+import fs from "fs";
 import pino from "pino";
 import QR from "qrcode-terminal";
 import makeWASocket, {
@@ -253,6 +254,20 @@ export default class BotController {
   public async sendText(number: string, message: string) {
     const jid = this.getJidFromNumber(number);
     return await this.sock.sendMessage(jid, { text: message });
+  }
+
+  public async sendImage(number: string, image: Buffer, caption?: string) {
+    const jid = this.getJidFromNumber(number);
+    return await this.sock.sendMessage(jid, { image, caption });
+  }
+
+  public async sendImageFromPath(
+    number: string,
+    path: string,
+    caption?: string
+  ) {
+    const image = fs.readFileSync(path);
+    return await this.sendImage(number, image, caption);
   }
 
   public async sendPoll(

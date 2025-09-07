@@ -23,7 +23,7 @@ export default class UserInvite extends Model {
 
   @ForeignKey(() => Invite)
   @Column(DataType.INTEGER)
-  enviteId!: number;
+  inviteId!: number;
 
   @Column(DataType.STRING)
   pollId!: string;
@@ -35,5 +35,5 @@ export default class UserInvite extends Model {
   user!: User;
 
   @BelongsTo(() => Invite)
-  envite!: Invite;
+  invite!: Invite;
 }

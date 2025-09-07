@@ -12,7 +12,12 @@ import makeWASocket, {
 } from "baileys";
 
 import redis from "../database/redis";
+
+import User from "../models/User";
 import UserInvite from "../models/UserInvite";
+import Invite, { InviteStatus } from "../models/Invite";
+
+import { botConfig } from "../config/bot";
 import { useRedisAuthState } from "../utils/botAuth";
 import { sendInviteToAlls } from "../commands/sendInvite";
 
@@ -84,6 +89,13 @@ export default class BotController {
         const contentType = getContentType(message.message);
         if (!contentType) return;
 
+        let number = message.key.senderPn?.includes("@s")
+          ? message.key.senderPn
+          : message.key.senderLid?.includes("@s")
+          ? message.key.senderLid
+          : message.key.remoteJid;
+        number = number.replace(/\D+/g, "");
+
         if (contentType === "pollUpdateMessage") {
           const messageContent = message.message[contentType];
 
@@ -92,13 +104,66 @@ export default class BotController {
           });
 
           if (userEnvite) {
-            console.log(
-              "got poll update, aggregation: ",
-              getAggregateVotesInPollMessage({
-                message: userEnvite.poll.message,
-                pollUpdates: [messageContent as any],
-              })
-            );
+            const votesResult = getAggregateVotesInPollMessage({
+              message: userEnvite.poll.message,
+              pollUpdates: [messageContent as any],
+            });
+
+            for (const vote of votesResult) {
+              if (vote.name === "sim" && vote.voters.length) {
+                const user = await User.findOne({ where: { number } });
+
+                if (user) {
+                  const userInvite = await UserInvite.findOne({
+                    where: { userId: user.id },
+                    include: [
+                      {
+                        as: "invite",
+                        model: Invite,
+                        where: { status: InviteStatus.PENDING },
+                        required: true,
+                      },
+                    ],
+                  });
+
+                  if (userInvite) {
+                    await userInvite.invite.update({
+                      status: InviteStatus.ACCEPTED,
+                    });
+                    await this.sendText(
+                      botConfig.owner,
+                      `${user.name} aceitou o convite!`
+                    );
+                  }
+                }
+              }
+
+              if (vote.name === "não" && vote.voters.length) {
+                const user = await User.findOne({ where: { number } });
+
+                const userInvite = await UserInvite.findOne({
+                  where: { userId: user.id },
+                  include: [
+                    {
+                      as: "invite",
+                      model: Invite,
+                      where: { status: InviteStatus.PENDING },
+                      required: true,
+                    },
+                  ],
+                });
+
+                if (userInvite) {
+                  await userInvite.invite.update({
+                    status: InviteStatus.REJECTED,
+                  });
+                  await this.sendText(
+                    botConfig.owner,
+                    `${user.name} rejeitou o convite!`
+                  );
+                }
+              }
+            }
           }
         }
 
@@ -115,6 +180,56 @@ export default class BotController {
 
         if (msgText.toLowerCase() === "enviar convites") {
           sendInviteToAlls(this);
+        }
+
+        if (msgText.toLowerCase() === "sim") {
+          const user = await User.findOne({ where: { number } });
+
+          if (user) {
+            const userInvite = await UserInvite.findOne({
+              where: { userId: user.id },
+              include: [
+                {
+                  as: "invite",
+                  model: Invite,
+                  where: { status: InviteStatus.PENDING },
+                  required: true,
+                },
+              ],
+            });
+
+            if (userInvite) {
+              await userInvite.invite.update({ status: InviteStatus.ACCEPTED });
+              await this.sendText(
+                botConfig.owner,
+                `${user.name} aceitou o convite!`
+              );
+            }
+          }
+        }
+
+        if (["não", "nao"].includes(msgText.toLowerCase())) {
+          const user = await User.findOne({ where: { number } });
+
+          const userInvite = await UserInvite.findOne({
+            where: { userId: user.id },
+            include: [
+              {
+                as: "invite",
+                model: Invite,
+                where: { status: InviteStatus.PENDING },
+                required: true,
+              },
+            ],
+          });
+
+          if (userInvite) {
+            await userInvite.invite.update({ status: InviteStatus.REJECTED });
+            await this.sendText(
+              botConfig.owner,
+              `${user.name} rejeitou o convite!`
+            );
+          }
         }
       }
     });

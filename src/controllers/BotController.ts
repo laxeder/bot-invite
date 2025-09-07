@@ -5,12 +5,14 @@ import pino from "pino";
 import QR from "qrcode-terminal";
 import makeWASocket, {
   Browsers,
+  getAggregateVotesInPollMessage,
   getContentType,
   isJidUser,
   isLidUser,
 } from "baileys";
 
 import redis from "../database/redis";
+import UserInvite from "../models/UserInvite";
 import { useRedisAuthState } from "../utils/botAuth";
 import { sendInviteToAlls } from "../commands/sendInvite";
 
@@ -74,7 +76,7 @@ export default class BotController {
   private configEvents() {
     this.sock.ev.on("creds.update", this.auth.saveCreds);
 
-    this.sock.ev.on("messages.upsert", ({ messages }) => {
+    this.sock.ev.on("messages.upsert", async ({ messages }) => {
       for (const message of messages) {
         console.info(JSON.stringify(message));
         if (!message.message) return;
@@ -82,12 +84,29 @@ export default class BotController {
         const contentType = getContentType(message.message);
         if (!contentType) return;
 
+        if (contentType === "pollUpdateMessage") {
+          const messageContent = message.message[contentType];
+
+          const userEnvite = await UserInvite.findOne({
+            where: { pollId: messageContent.pollCreationMessageKey.id },
+          });
+
+          if (userEnvite) {
+            console.log(
+              "got poll update, aggregation: ",
+              getAggregateVotesInPollMessage({
+                message: userEnvite.poll.message,
+                pollUpdates: [messageContent as any],
+              })
+            );
+          }
+        }
+
         const messageContent = message.message[contentType];
-        console.log(contentType, messageContent);
 
         const msgText =
           contentType === "conversation"
-            ? messageContent[contentType]
+            ? messageContent
             : contentType === "extendedTextMessage"
             ? messageContent["text"]
             : null;
@@ -97,8 +116,6 @@ export default class BotController {
         if (msgText.toLowerCase() === "enviar convites") {
           sendInviteToAlls(this);
         }
-
-        console.log(msgText);
       }
     });
   }

@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { connectRedis } from "./database/redis";
 import { connectSequelize } from "./database/sequelize";
 

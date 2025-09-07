@@ -1,4 +1,5 @@
 import moment from "moment";
+import { Op } from "sequelize";
 
 import User from "../models/User";
 import UserInvite from "../models/UserInvite";
@@ -65,7 +66,11 @@ export async function sendInvite(
     if (pendingUserInvite.length) {
       await Invite.update(
         { status: InviteStatus.NOT_RESPONDED },
-        { where: { id: pendingUserInvite.map((i) => i.id) } }
+        {
+          where: {
+            id: { [Op.in]: pendingUserInvite.map((i) => i.id) },
+          },
+        }
       );
     }
 
